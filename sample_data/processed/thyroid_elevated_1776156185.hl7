@@ -1,7 +1,0 @@
-MSH|^~\&|AUSLAB|Laverty Pathology|PathGuard|GP Clinic|20260411094500||ORU^R01|LAV20260411001|P|2.4|||NE|NE|AUS
-PID|1||PG100003^^^LAV^PI||Thompson^Sarah^Louise||19801108|F|||7 Banksia Court^^Melbourne^VIC^3000^AUS|||||||
-PV1|1|O|||||Nguyen^Michael^^^Dr|||||||||||||||||||||||||||||||
-OBR|1|REQ20260411003|LAB20260411003|11580-8^Thyroid Function Tests^LN|||20260411085000|||||||||Nguyen^Michael^^^Dr||||||20260411094500|||F
-OBX|1|NM|11580-8^TSH^LN||8.2|mIU/L|0.4-4.0|H||F|||20260411094500
-OBX|2|NM|3024-7^Free T4^LN||12.1|pmol/L|9.0-19.0|N||F|||20260411094500
-OBX|3|NM|3051-0^Free T3^LN||4.2|pmol/L|3.5-6.5|N||F|||20260411094500

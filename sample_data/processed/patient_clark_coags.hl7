@@ -1,7 +1,0 @@
-MSH|^~\&|AUSLAB|QML Pathology|PathGuard|GP Clinic|20260413113000||ORU^R01|QML-26-4872150|P|2.4|||NE|NE|AUS
-PID|1||PG100015^^^QML^PI||Clark^Susan||19530409|F|||8 Eucalyptus Close^^Brisbane^QLD^4000^AUS|||||||
-PV1|1|O|||||Mitchell^Sarah^^^Dr^2345671A|||||||||||||||||||||||||||||||
-OBR|1|REQ20260413015|QML-26-4872150|55398-2^Coagulation Studies^LN|||20260413080000|||||||||Mitchell^Sarah^^^Dr||||||20260413113000|||F
-OBX|1|NM|6301-6^INR^LN||3.8||2.0-3.0|HH||F|||20260413113000
-OBX|2|NM|5902-2^Prothrombin Time^LN||42|seconds|10-14|H||F|||20260413113000
-OBX|3|NM|3173-2^APTT^LN||38|seconds|25-37|H||F|||20260413113000

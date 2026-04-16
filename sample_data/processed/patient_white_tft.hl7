@@ -1,6 +1,0 @@
-MSH|^~\&|AUSLAB|QML Pathology|PathGuard|GP Clinic|20260413153000||ORU^R01|QML-26-4872100|P|2.4|||NE|NE|AUS
-PID|1||PG100013^^^QML^PI||White^Karen||19650617|F|||67 Eucalyptus Drive^^Melbourne^VIC^3000^AUS|||||||
-PV1|1|O|||||Mitchell^Sarah^^^Dr|||||||||||||||||||||||||||||||
-OBR|1|REQ20260413013|QML-26-4872100|24348-5^Thyroid Function Tests^LN|||20260413084500|||||||||Mitchell^Sarah^^^Dr||||||20260413153000|||F
-OBX|1|NM|3016-3^TSH^LN||2.1|mIU/L|0.4-4.0|N||F|||20260413153000
-OBX|2|NM|14927-8^Free T4^LN||14.8|pmol/L|9.0-19.0|N||F|||20260413153000
