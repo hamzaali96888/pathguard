@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: pathguard
+    runtime: python
+    region: oregon    # change to: frankfurt, singapore, ohio, virginia as needed
+
+    # Build: install deps for both frontend and backend, then build React app
+    buildCommand: |
+      pip install -r backend/requirements.txt &&
+      curl -fsSL https://deb.nodesource.com/setup_20.x | bash - &&
+      apt-get install -y nodejs &&
+      npm ci --prefix frontend &&
+      npm run build --prefix frontend &&
+      mkdir -p backend/static &&
+      cp -r frontend/dist/. backend/static/
+
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+
+    envVars:
+      - key: PORT
+        value: 10000
+
+    # Render's free tier has ephemeral storage — the DB resets on each deploy,
+    # but the app auto-loads demo data on startup so the dashboard is never blank.
+    # For a persistent DB, add a Render Disk (paid) and set PATHGUARD_DB=/data/pathguard.db

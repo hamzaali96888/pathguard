@@ -1,0 +1,133 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: #f8fafc;
+    color: #0f172a;
+  }
+}
+
+@layer components {
+  .flag-badge {
+    @apply inline-flex items-center justify-center rounded px-1.5 py-0.5 text-xs font-bold leading-none;
+  }
+
+  .flag-hh {
+    @apply bg-red-800 text-white;
+  }
+
+  .flag-h {
+    @apply bg-red-500 text-white;
+  }
+
+  .flag-ll {
+    @apply bg-blue-800 text-white;
+  }
+
+  .flag-l {
+    @apply bg-blue-500 text-white;
+  }
+
+  .flag-a {
+    @apply bg-orange-500 text-white;
+  }
+
+  .flag-n {
+    @apply bg-gray-100 text-gray-500;
+  }
+
+  .severity-dot-critical {
+    @apply inline-block w-2.5 h-2.5 rounded-full bg-red-500 flex-shrink-0;
+  }
+
+  .severity-dot-review {
+    @apply inline-block w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0;
+  }
+
+  .action-btn {
+    @apply inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium
+           transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .action-btn-green {
+    @apply action-btn bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500;
+  }
+
+  .action-btn-red {
+    @apply action-btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+  }
+
+  .action-btn-blue {
+    @apply action-btn bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500;
+  }
+
+  .action-btn-grey {
+    @apply action-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-gray-300;
+  }
+
+  .action-btn-darkred {
+    @apply action-btn bg-red-900 text-white hover:bg-red-950 focus:ring-red-700;
+  }
+}
+
+/* Smooth card expansion */
+.card-body-enter {
+  animation: slideDown 0.18s ease-out forwards;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loading shimmer */
+@keyframes shimmer {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+.shimmer {
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+/* Toast slide-in */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.25s ease-out forwards;
+}
+
+/* Drag-over drop zone pulse border */
+@keyframes dropPulse {
+  0%, 100% { border-color: #6366f1; }
+  50%       { border-color: #a5b4fc; }
+}
+
+.drop-zone-active {
+  animation: dropPulse 1s ease-in-out infinite;
+}

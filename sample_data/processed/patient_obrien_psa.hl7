@@ -1,0 +1,7 @@
+MSH|^~\&|AUSLAB|QML Pathology|PathGuard|GP Clinic|20260412100000||ORU^R01|QML-26-4871988|P|2.4|||NE|NE|AUS
+PID|1||PG100007^^^QML^PI||O'Brien^James||19620530|M|||45 Paperbark Street^^Brisbane^QLD^4000^AUS|||||||
+PV1|1|O|||||Mitchell^Sarah^^^Dr|||||||||||||||||||||||||||||||
+OBR|1|REQ20260411007|QML-26-4871988|10334-1^Prostate Specific Antigen^LN|||20260411093000|||||||||Mitchell^Sarah^^^Dr||||||20260412100000|||F
+OBX|1|NM|2857-1^PSA^LN||5.8|ug/L|<4.0|H||F|||20260412100000
+OBX|2|NM|10886-0^Free PSA^LN||0.58|ug/L|||N||F|||20260412100000
+OBX|3|NM|13980-8^Free/Total PSA Ratio^LN||10|%|>25|L||F|||20260412100000

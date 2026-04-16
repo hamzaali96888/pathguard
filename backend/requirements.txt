@@ -1,0 +1,6 @@
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+hl7==0.4.5
+watchdog==6.0.0
+python-multipart>=0.0.9
+aiofiles>=23.2.1

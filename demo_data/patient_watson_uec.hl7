@@ -1,0 +1,11 @@
+MSH|^~\&|AUSLAB|Laverty Pathology|PathGuard|GP Clinic|20260413143000||ORU^R01|LAV-26-7723500|P|2.4|||NE|NE|AUS
+PID|1||PG100010^^^LAV^PI||Watson^Emily||19980219|F|||5 Banksia Street^^Sydney^NSW^2000^AUS|||||||
+PV1|1|O|||||Mitchell^Sarah^^^Dr|||||||||||||||||||||||||||||||
+OBR|1|REQ20260413010|LAV-26-7723500|2164-2^Urea Electrolytes Creatinine^LN|||20260413090000|||||||||Mitchell^Sarah^^^Dr||||||20260413143000|||F
+OBX|1|NM|2951-2^Sodium^LN||139|mmol/L|135-145|N||F|||20260413143000
+OBX|2|NM|6298-4^Potassium^LN||4.2|mmol/L|3.5-5.2|N||F|||20260413143000
+OBX|3|NM|2075-0^Chloride^LN||101|mmol/L|95-110|N||F|||20260413143000
+OBX|4|NM|1963-8^Bicarbonate^LN||25|mmol/L|22-32|N||F|||20260413143000
+OBX|5|NM|3094-0^Urea^LN||5.1|mmol/L|2.5-7.8|N||F|||20260413143000
+OBX|6|NM|2160-0^Creatinine^LN||68|umol/L|45-90|N||F|||20260413143000
+OBX|7|NM|33914-3^eGFR^LN||98|mL/min/1.73m2|>60|N||F|||20260413143000

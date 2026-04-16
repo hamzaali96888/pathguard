@@ -1,0 +1,9 @@
+MSH|^~\&|AUSLAB|Laverty Pathology|PathGuard|GP Clinic|20260413084500||ORU^R01|LAV-26-7723455|P|2.4|||NE|NE|AUS
+PID|1||PG100004^^^LAV^PI||Nguyen^Lisa^Thi||19910715|F|||23 Wattle Avenue^^Perth^WA^6000^AUS|||||||
+PV1|1|O|||||Mitchell^Sarah^^^Dr|||||||||||||||||||||||||||||||
+OBR|1|REQ20260412005|LAV-26-7723455|90705-3^Iron Studies^LN|||20260412100000|||||||||Mitchell^Sarah^^^Dr||||||20260413084500|||F
+OBX|1|NM|14798-2^Iron^LN||4|umol/L|10-30|L||F|||20260413084500
+OBX|2|NM|20567-4^Ferritin^LN||8|ug/L|20-200|L||F|||20260413084500
+OBX|3|NM|3034-6^Transferrin^LN||3.8|g/L|2.0-3.6|H||F|||20260413084500
+OBX|4|NM|2502-3^Transferrin Saturation^LN||4|%|15-45|L||F|||20260413084500
+OBX|5|NM|35215-3^TIBC^LN||95|umol/L|45-70|H||F|||20260413084500

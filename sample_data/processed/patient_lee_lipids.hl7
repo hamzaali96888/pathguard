@@ -1,0 +1,9 @@
+MSH|^~\&|AUSLAB|QML Pathology|PathGuard|GP Clinic|20260411140000||ORU^R01|QML-26-4872050|P|2.4|||NE|NE|AUS
+PID|1||PG100011^^^QML^PI||Lee^Jennifer||19741004|F|||18 Acacia Road^^Brisbane^QLD^4000^AUS|||||||
+PV1|1|O|||||Mitchell^Sarah^^^Dr|||||||||||||||||||||||||||||||
+OBR|1|REQ20260411011|QML-26-4872050|57698-3^Lipid Studies^LN|||20260411073000|||||||||Mitchell^Sarah^^^Dr||||||20260411140000|||F
+OBX|1|NM|2093-3^Total Cholesterol^LN||4.8|mmol/L|<5.5|N||F|||20260411140000
+OBX|2|NM|2571-8^Triglycerides^LN||1.2|mmol/L|<2.0|N||F|||20260411140000
+OBX|3|NM|2085-9^HDL Cholesterol^LN||1.6|mmol/L|>1.2|N||F|||20260411140000
+OBX|4|NM|13457-7^LDL Cholesterol^LN||2.7|mmol/L|<3.5|N||F|||20260411140000
+OBX|5|NM|9830-1^Total/HDL Ratio^LN||3.0||<4.5|N||F|||20260411140000

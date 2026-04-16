@@ -1,0 +1,7 @@
+MSH|^~\&|AUSLAB|Sullivan Nicolaides Pathology|PathGuard|GP Clinic|20260412093000||ORU^R01|SNP-26-9182734|P|2.4|||NE|NE|AUS
+PID|1||PG100002^^^SNP^PI||Chen^David^Wei||19670922|M|||45 Eucalyptus Street^^Sydney^NSW^2000^AUS|||||||3456789012
+PV1|1|O|||||Mitchell^Sarah^^^Dr|||||||||||||||||||||||||||||||
+OBR|1|REQ20260411002|SNP-26-9182734|11502-2^Diabetes Monitoring^LN|||20260411074500|||||||||Mitchell^Sarah^^^Dr||||||20260412093000|||F
+OBX|1|NM|4548-4^HbA1c^LN||9.4|%|<6.5|H||F|||20260412093000
+OBX|2|NM|1558-6^Fasting Glucose^LN||12.8|mmol/L|3.0-5.5|H||F|||20260412093000
+OBX|3|NM|14870-9^Fructosamine^LN||420|umol/L|200-285|H||F|||20260412093000

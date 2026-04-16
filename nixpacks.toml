@@ -1,0 +1,23 @@
+# nixpacks.toml — Railway build configuration
+# Installs both Node (frontend build) and Python (backend runtime),
+# builds the React app, copies the dist into backend/static/,
+# then starts the FastAPI server.
+
+[phases.setup]
+nixPkgs = ["nodejs_20", "python312"]
+
+[phases.install]
+cmds = [
+  "npm ci --prefix frontend",
+  "pip install -r backend/requirements.txt",
+]
+
+[phases.build]
+cmds = [
+  "npm run build --prefix frontend",
+  "mkdir -p backend/static",
+  "cp -r frontend/dist/. backend/static/",
+]
+
+[start]
+cmd = "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
