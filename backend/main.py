@@ -23,7 +23,6 @@ Startup sequence:
 from __future__ import annotations
 
 import os
-import shutil
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -35,7 +34,7 @@ from fastapi.staticfiles import StaticFiles
 
 import store
 import triage as triage_engine
-from watcher import HL7Watcher, process_existing_files, load_demo_direct, WATCH_DIR
+from watcher import HL7Watcher, process_existing_files, load_demo_direct, process_hl7_file, WATCH_DIR
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -174,8 +173,10 @@ async def upload_file(file: UploadFile = File(...)):
     with open(dest, "wb") as f:
         f.write(contents)
 
-    print(f"[upload] Saved {os.path.basename(dest)} to drop_results_here/")
-    return {"success": True, "filename": os.path.basename(dest)}
+    # Process immediately — don't wait for the filesystem watcher
+    count = process_hl7_file(dest)
+    print(f"[upload] Processed {os.path.basename(dest)} — {count} record(s)")
+    return {"success": True, "filename": os.path.basename(dest), "records": count}
 
 
 # ---------------------------------------------------------------------------
@@ -185,23 +186,12 @@ async def upload_file(file: UploadFile = File(...)):
 @app.post("/api/load-demo")
 def load_demo():
     demo_dir = os.path.abspath(DEMO_DATA_DIR)
-    watch_dir = os.path.abspath(WATCH_DIR)
-
     if not os.path.isdir(demo_dir):
         raise HTTPException(status_code=404, detail="demo_data/ folder not found")
 
-    os.makedirs(watch_dir, exist_ok=True)
-    copied = 0
-    for fname in sorted(os.listdir(demo_dir)):
-        if Path(fname).suffix.lower() in WATCHED_EXTENSIONS:
-            src = os.path.join(demo_dir, fname)
-            dst = os.path.join(watch_dir, fname)
-            if os.path.isfile(src):
-                shutil.copy2(src, dst)
-                copied += 1
-
-    print(f"[demo] Copied {copied} demo file(s) to drop_results_here/")
-    return {"success": True, "files_copied": copied}
+    # Process directly into the DB — no watcher dependency
+    count = load_demo_direct(demo_dir)
+    return {"success": True, "files_copied": count}
 
 
 @app.post("/api/reset")
