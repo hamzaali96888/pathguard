@@ -38,46 +38,65 @@ def _is_watched(filename: str) -> bool:
     return Path(filename).suffix.lower() in WATCHED_EXTENSIONS
 
 
+def parse_and_save(filepath: str, source_name: str = "") -> int:
+    """
+    Parse a file (HL7/PIT/PDF) and persist results to the DB.
+    Does NOT move or delete the file — caller decides what to do with it.
+
+    Returns the number of records saved (0 on failure).
+    """
+    source_name = source_name or os.path.basename(filepath)
+    ext = Path(filepath).suffix.lower()
+    try:
+        if ext == ".pdf":
+            records = parse_pdf_file(filepath)
+        else:
+            records = parse_hl7_file(filepath)
+
+        if records:
+            save_results(records, source_file=source_name)
+            patient = records[0].get("patient_name", "Unknown")
+            print(
+                f"[watcher] New result: {source_name} "
+                f"— Patient: {patient} — {len(records)} test(s) parsed"
+            )
+        else:
+            print(f"[watcher] No results parsed from {source_name}")
+
+        return len(records) if records else 0
+
+    except Exception as e:
+        print(f"[watcher] Error processing {source_name}: {e}")
+        return 0
+
+
 def process_hl7_file(filepath: str) -> int:
     """
-    Parse a single HL7/PIT file, persist results, and move file to /processed.
+    Parse a single file, persist results, then move it to /processed.
+    Used by the folder watcher for on-premise use.
 
-    Returns the number of OBX records saved.
+    Returns the number of records saved.
     """
     filepath = os.path.abspath(filepath)
     processed_dir = os.path.join(os.path.dirname(filepath), "processed")
     os.makedirs(processed_dir, exist_ok=True)
 
+    count = parse_and_save(filepath)
+
+    # Move to processed/ — append timestamp suffix to avoid overwrite conflicts
+    dest = os.path.join(processed_dir, os.path.basename(filepath))
+    if os.path.exists(dest):
+        ts = str(int(time.time()))
+        name, ext = os.path.splitext(os.path.basename(filepath))
+        dest = os.path.join(processed_dir, f"{name}_{ts}{ext}")
+
     try:
-        ext = Path(filepath).suffix.lower()
-        if ext == ".pdf":
-            records = parse_pdf_file(filepath)
-        else:
-            records = parse_hl7_file(filepath)
-        if records:
-            save_results(records, source_file=os.path.basename(filepath))
-            patient = records[0].get("patient_name", "Unknown") if records else "Unknown"
-            print(
-                f"[watcher] New result: {os.path.basename(filepath)} "
-                f"— Patient: {patient} — {len(records)} test(s) parsed"
-            )
-        else:
-            print(f"[watcher] No results parsed from {os.path.basename(filepath)}")
-
-        # Move to processed/ — append timestamp suffix to avoid overwrite conflicts
-        dest = os.path.join(processed_dir, os.path.basename(filepath))
-        if os.path.exists(dest):
-            ts = str(int(time.time()))
-            name, ext = os.path.splitext(os.path.basename(filepath))
-            dest = os.path.join(processed_dir, f"{name}_{ts}{ext}")
-
         shutil.move(filepath, dest)
         print(f"[watcher] Moved {os.path.basename(filepath)} → processed/")
-        return len(records) if records else 0
-
     except Exception as e:
-        print(f"[watcher] Error processing {filepath}: {e}")
-        return 0
+        print(f"[watcher] Warning: could not move file to processed/: {e}")
+
+    return count
 
 
 def process_existing_files(watch_dir: str) -> int:

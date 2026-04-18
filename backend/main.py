@@ -23,7 +23,6 @@ Startup sequence:
 from __future__ import annotations
 
 import os
-import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -32,9 +31,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+import tempfile
+
 import store
 import triage as triage_engine
-from watcher import HL7Watcher, process_existing_files, load_demo_direct, process_hl7_file, WATCH_DIR
+from watcher import HL7Watcher, process_existing_files, load_demo_direct, parse_and_save, WATCH_DIR
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -153,30 +154,33 @@ def clear_normals():
 
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
-    ext = Path(file.filename or "").suffix.lower()
+    filename = file.filename or "upload"
+    ext = Path(filename).suffix.lower()
     if ext not in WATCHED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
             detail=f"Unsupported file type '{ext}'. Expected: {', '.join(sorted(WATCHED_EXTENSIONS))}",
         )
 
-    watch_dir = os.path.abspath(WATCH_DIR)
-    os.makedirs(watch_dir, exist_ok=True)
-    dest = os.path.join(watch_dir, file.filename)
-
-    if os.path.exists(dest):
-        ts = str(int(time.time()))
-        name, sfx = os.path.splitext(file.filename)
-        dest = os.path.join(watch_dir, f"{name}_{ts}{sfx}")
-
     contents = await file.read()
-    with open(dest, "wb") as f:
-        f.write(contents)
 
-    # Process immediately — don't wait for the filesystem watcher
-    count = process_hl7_file(dest)
-    print(f"[upload] Processed {os.path.basename(dest)} — {count} record(s)")
-    return {"success": True, "filename": os.path.basename(dest), "records": count}
+    # Write to a temp file so parsers can open it by path.
+    # This works on every platform (local, Render, Railway) without needing
+    # drop_results_here/ to exist or be writable.
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+        tmp.write(contents)
+        tmp_path = tmp.name
+
+    try:
+        count = parse_and_save(tmp_path, source_name=filename)
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+    print(f"[upload] Processed {filename} — {count} record(s)")
+    return {"success": True, "filename": filename, "records": count}
 
 
 # ---------------------------------------------------------------------------
