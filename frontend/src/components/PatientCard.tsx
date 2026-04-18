@@ -1,8 +1,80 @@
 import { useState } from 'react'
-import type { Patient } from '../types'
-import { calcAge, timeAgo, inboxBadge, inboxAgeHours, flagClass, trendDirection, trendColor } from '../utils'
+import type { Patient, TestResult } from '../types'
+import { calcAge, timeAgo, inboxBadge, inboxAgeHours, flagClass, trendDirection, trendColor, parseRefRange } from '../utils'
 import RangeBar from './RangeBar'
 import PatientExpandedBody from './PatientExpandedBody'
+
+// ── Headline pill selection ───────────────────────────────────────────
+// Severity order: HH/LL (critical) > H/L > A
+const FLAG_RANK: Record<string, number> = { HH: 4, LL: 4, H: 3, L: 3, A: 2 }
+
+// Rough body-system bucketing — ensures we show diversity, not 4 haem results
+const SYSTEM_PATTERNS: [RegExp, string][] = [
+  [/haemo?globin|^hb$|^hgb$/i,                      'haem'],
+  [/wcc|wbc|white.?cell|neutrophil|lymphocyte|monocyte|eosinophil|basophil|platelet|plt|^rcc$|^rbc$|mcv|mch|mchc|rdw|haematocrit|hematocrit/i, 'haem'],
+  [/sodium|potassium|chloride|bicarbonate|urea|creatinine|egfr/i, 'renal'],
+  [/\balt\b|\bast\b|\balp\b|\bggt\b|bilirubin|albumin|total.?protein/i, 'liver'],
+  [/cholesterol|ldl|hdl|triglyceride/i,              'lipid'],
+  [/glucose|hba1c/i,                                  'glucose'],
+  [/ferritin|\biron\b|transferrin|tibc/i,             'iron'],
+  [/\btsh\b|free.?t[34]|\bt[34]\b/i,                 'thyroid'],
+  [/\bcrp\b|\besr\b/i,                                'inflam'],
+  [/urine|acr|uacr|microalbumin/i,                   'urine'],
+]
+
+function systemOf(testName: string): string {
+  for (const [re, sys] of SYSTEM_PATTERNS) {
+    if (re.test(testName)) return sys
+  }
+  return testName.toLowerCase()   // unknown → its own bucket
+}
+
+function deviationRatio(r: TestResult): number {
+  const val = parseFloat(r.value)
+  if (isNaN(val)) return 0
+  const rr = parseRefRange(r.ref_range)
+  if (!rr) return 0
+  if (rr.min !== undefined && val < rr.min && rr.min !== 0) return (rr.min - val) / rr.min
+  if (rr.max !== undefined && val > rr.max && rr.max !== 0) return (val - rr.max) / rr.max
+  return 0
+}
+
+/**
+ * From a list of abnormal results pick at most `max` headline pills.
+ * Priority: worst flags first (HH/LL > H/L > A), then deviation magnitude.
+ * Diversity: prefer one result per body system before doubling up.
+ */
+function selectHeadlinePills(abnormals: TestResult[], max = 4): TestResult[] {
+  if (abnormals.length <= max) return abnormals
+
+  const ranked = [...abnormals].sort((a, b) => {
+    const fa = FLAG_RANK[a.flag?.toUpperCase()] ?? 1
+    const fb = FLAG_RANK[b.flag?.toUpperCase()] ?? 1
+    if (fb !== fa) return fb - fa
+    return deviationRatio(b) - deviationRatio(a)
+  })
+
+  const seenSystems = new Set<string>()
+  const selected: TestResult[] = []
+
+  // First pass: highest-ranked result per system
+  for (const r of ranked) {
+    if (selected.length >= max) break
+    const sys = systemOf(r.test_name)
+    if (!seenSystems.has(sys)) {
+      seenSystems.add(sys)
+      selected.push(r)
+    }
+  }
+
+  // Second pass: fill remaining slots with next-ranked results not yet picked
+  for (const r of ranked) {
+    if (selected.length >= max) break
+    if (!selected.includes(r)) selected.push(r)
+  }
+
+  return selected
+}
 
 interface Props {
   patient: Patient
@@ -82,14 +154,23 @@ export default function PatientCard({ patient, onAction }: Props) {
           </div>
         </div>
 
-        {/* Row 2: Abnormal test pills (collapsed only) */}
-        {!expanded && abnormalResults.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5 pl-4">
-            {abnormalResults.map(r => (
-              <TestPill key={r.id} result={r} />
-            ))}
-          </div>
-        )}
+        {/* Row 2: Headline abnormal pills (collapsed only — max 4, worst first) */}
+        {!expanded && abnormalResults.length > 0 && (() => {
+          const shown    = selectHeadlinePills(abnormalResults)
+          const overflow = abnormalResults.length - shown.length
+          return (
+            <div className="mt-2 pl-4">
+              <div className="flex flex-wrap gap-1.5">
+                {shown.map(r => <TestPill key={r.id} result={r} />)}
+              </div>
+              {overflow > 0 && (
+                <p className="mt-1 text-xs text-gray-400">
+                  +{overflow} more abnormal result{overflow !== 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+          )
+        })()}
         {!expanded && abnormalResults.length === 0 && (
           <p className="mt-1 pl-4 text-xs text-gray-400 italic">All results within range</p>
         )}

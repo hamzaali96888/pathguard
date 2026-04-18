@@ -6,6 +6,18 @@ import {
 } from '../utils'
 import RangeBar from './RangeBar'
 
+/** Group results by panel_name, preserving encounter order. */
+function groupByPanel(results: TestResult[]): { name: string; results: TestResult[] }[] {
+  const order: string[] = []
+  const map: Record<string, TestResult[]> = {}
+  for (const r of results) {
+    const key = r.panel_name || 'Results'
+    if (!map[key]) { map[key] = []; order.push(key) }
+    map[key].push(r)
+  }
+  return order.map(name => ({ name, results: map[name] }))
+}
+
 type ActionKey = 'no-action' | 'recall' | 'nurse' | 'urgent'
 
 interface Props {
@@ -56,28 +68,47 @@ export default function PatientExpandedBody({ patient, onAction }: Props) {
             {sourceFile && <MetaItem label="Source" value={sourceFile} />}
           </div>
 
-          {/* Full results table — ALL tests, both normal and abnormal */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-gray-400 uppercase tracking-wider border-b border-gray-100 bg-white">
-                  <th className="px-5 py-2 text-left font-medium">Test</th>
-                  <th className="px-3 py-2 text-right font-medium">Result</th>
-                  <th className="px-3 py-2 text-center font-medium">Flag</th>
-                  <th className="px-3 py-2 text-left font-medium">Units</th>
-                  <th className="px-3 py-2 text-left font-medium">Ref Range</th>
-                  <th className="px-3 py-2 text-left font-medium w-16">Range</th>
-                  <th className="px-3 py-2 text-center font-medium">Trend</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-300">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {patient.results.map(r => (
-                  <ResultRow key={r.id} result={r} />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* Full results table — ALL tests, grouped by panel */}
+          {(() => {
+            const panels = groupByPanel(patient.results)
+            const multiPanel = panels.length > 1
+            return (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs text-gray-400 uppercase tracking-wider border-b border-gray-100 bg-white">
+                      <th className="px-5 py-2 text-left font-medium">Test</th>
+                      <th className="px-3 py-2 text-right font-medium">Result</th>
+                      <th className="px-3 py-2 text-center font-medium">Flag</th>
+                      <th className="px-3 py-2 text-left font-medium">Units</th>
+                      <th className="px-3 py-2 text-left font-medium">Ref Range</th>
+                      <th className="px-3 py-2 text-left font-medium w-16">Range</th>
+                      <th className="px-3 py-2 text-center font-medium">Trend</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-300">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {panels.map(({ name, results: panelResults }) => (
+                      <>
+                        {multiPanel && (
+                          <tr key={`ph-${name}`} className="bg-slate-50 border-t border-b border-slate-200">
+                            <td colSpan={8} className="px-5 py-1.5">
+                              <span className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+                                {name}
+                              </span>
+                            </td>
+                          </tr>
+                        )}
+                        {panelResults.map(r => (
+                          <ResultRow key={r.id} result={r} />
+                        ))}
+                      </>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          })()}
         </>
       ) : (
         <OriginalReport patient={patient} />
@@ -127,61 +158,58 @@ function formatOriginalReport(patient: Patient): string {
   const meta = patient.results[0]
   if (!meta) return 'No report data available.'
 
-  const labName      = meta.lab_name       || 'Pathology'
-  const panelName    = meta.panel_name     || 'Laboratory Report'
-  const collected    = meta.collected_date  ? fmtDateTime(meta.collected_date)  : '—'
-  const reported     = meta.reported_date   ? fmtDateTime(meta.reported_date)   : '—'
-  const doctor       = meta.ordering_doctor || '—'
-  const nameParts    = patient.patient_name.split(' ')
-  const surname      = nameParts[0] || ''
-  const given        = nameParts.slice(1).join(' ')
-  const displayName  = given ? `${surname}, ${given}` : surname
-  const dob          = fmtDate(patient.patient_dob)
-  const age          = calcAge(patient.patient_dob)
-  const sex          = patient.patient_sex || '—'
+  const labName     = meta.lab_name       || 'Pathology'
+  const collected   = meta.collected_date  ? fmtDateTime(meta.collected_date)  : '—'
+  const reported    = meta.reported_date   ? fmtDateTime(meta.reported_date)   : '—'
+  const doctor      = meta.ordering_doctor || '—'
+  const nameParts   = patient.patient_name.split(' ')
+  const surname     = nameParts[0] || ''
+  const given       = nameParts.slice(1).join(' ')
+  const displayName = given ? `${surname}, ${given}` : surname
+  const dob         = fmtDate(patient.patient_dob)
+  const age         = calcAge(patient.patient_dob)
+  const sex         = patient.patient_sex || '—'
 
   const div = '─'.repeat(70)
-  const div2 = '─'.repeat(70)
 
   let r = ''
   r += `${labName.toUpperCase()}\n`
-  r += `${div}\n`
-  r += `\n`
+  r += `${div}\n\n`
   r += `Patient:      ${displayName}\n`
-  r += `DOB:          ${dob}   ${sex}   ${age}y\n`
-  r += `\n`
+  r += `DOB:          ${dob}   ${sex}   ${age}y\n\n`
   r += `Requesting:   ${doctor}\n`
   r += `Collected:    ${collected}\n`
-  r += `Reported:     ${reported}\n`
-  r += `\n`
-  r += `${div2}\n`
-  r += `\n`
-  r += `${panelName.toUpperCase()}\n`
-  r += `\n`
+  r += `Reported:     ${reported}\n\n`
+  r += `${div}\n\n`
 
-  // Column headers
   const col1 = 28, col2 = 9, col3 = 6, col4 = 18, col5 = 18
-  r += pad('Test', col1) + rpad('Result', col2) + '  ' + pad('Flag', col3) + '  ' + pad('Units', col4) + pad('Ref Range', col5) + '\n'
-  r += pad('─'.repeat(col1 - 1), col1) + rpad('─'.repeat(col2), col2) + '  ' + pad('─'.repeat(col3 - 1), col3) + '  ' + pad('─'.repeat(col4 - 1), col4) + pad('─'.repeat(col5 - 1), col5) + '\n'
+  const colHeader = pad('Test', col1) + rpad('Result', col2) + '  ' + pad('Flag', col3) + '  ' + pad('Units', col4) + pad('Ref Range', col5)
+  const colDivider = pad('─'.repeat(col1 - 1), col1) + rpad('─'.repeat(col2), col2) + '  ' + pad('─'.repeat(col3 - 1), col3) + '  ' + pad('─'.repeat(col4 - 1), col4) + pad('─'.repeat(col5 - 1), col5)
 
-  for (const res of patient.results) {
-    const isAbnormal = res.flag && res.flag !== 'N' && res.flag !== ''
-    const flagStr = isAbnormal ? res.flag : ''
-    const marker  = (res.flag === 'HH' || res.flag === 'LL') ? ' **' : ''
+  // Group by panel and render each with its own header
+  const panels = groupByPanel(patient.results)
+  for (const panel of panels) {
+    r += `${panel.name.toUpperCase()}\n\n`
+    r += colHeader + '\n'
+    r += colDivider + '\n'
 
-    r += pad(res.test_name.slice(0, col1 - 1), col1)
-       + rpad(res.value || '—', col2)
-       + '  '
-       + pad((flagStr + marker).slice(0, col3 - 1), col3)
-       + '  '
-       + pad((res.units || '').slice(0, col4 - 1), col4)
-       + pad((res.ref_range || '').slice(0, col5 - 1), col5)
-       + '\n'
+    for (const res of panel.results) {
+      const isAbnormal = res.flag && res.flag !== 'N' && res.flag !== ''
+      const flagStr = isAbnormal ? res.flag : ''
+      const marker  = (res.flag === 'HH' || res.flag === 'LL') ? ' **' : ''
+      r += pad(res.test_name.slice(0, col1 - 1), col1)
+         + rpad(res.value || '—', col2)
+         + '  '
+         + pad((flagStr + marker).slice(0, col3 - 1), col3)
+         + '  '
+         + pad((res.units || '').slice(0, col4 - 1), col4)
+         + pad((res.ref_range || '').slice(0, col5 - 1), col5)
+         + '\n'
+    }
+    r += '\n'
   }
 
-  r += `\n`
-  r += `${div}\n`
-  r += `\n`
+  r += `${div}\n\n`
   r += `For clinical enquiries contact ${labName} directly.\n`
   r += `Report generated by PathGuard — authorised use only.\n`
 
