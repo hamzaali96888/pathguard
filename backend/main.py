@@ -49,7 +49,7 @@ DEMO_DATA_DIR = os.environ.get(
 
 STATIC_DIR = os.path.join(_HERE, "static")
 
-WATCHED_EXTENSIONS = {".hl7", ".pit"}
+WATCHED_EXTENSIONS = {".hl7", ".pit", ".pdf"}
 
 _watcher = HL7Watcher(watch_dir=WATCH_DIR)
 
@@ -157,7 +157,7 @@ async def upload_file(file: UploadFile = File(...)):
     if ext not in WATCHED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file type '{ext}'. Expected: {', '.join(WATCHED_EXTENSIONS)}",
+            detail=f"Unsupported file type '{ext}'. Expected: {', '.join(sorted(WATCHED_EXTENSIONS))}",
         )
 
     watch_dir = os.path.abspath(WATCH_DIR)

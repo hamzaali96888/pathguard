@@ -5,7 +5,7 @@ Monitors the drop_results_here/ directory for new files using watchdog.
 When a file appears: parse it, save to DB, move it to the processed/ subfolder.
 Runs in a background thread so FastAPI startup is non-blocking.
 
-Supported extensions: .hl7  .HL7  .pit  .PIT
+Supported extensions: .hl7  .HL7  .pit  .PIT  .pdf  .PDF
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ from watchdog.events import FileSystemEventHandler, FileCreatedEvent
 from watchdog.observers import Observer
 
 from hl7_parser import parse_hl7_file
+from pdf_parser import parse_pdf_file
 from store import save_results
 
 
@@ -30,7 +31,7 @@ WATCH_DIR = os.environ.get(
     os.path.join(os.path.dirname(__file__), "..", "drop_results_here"),
 )
 
-WATCHED_EXTENSIONS = {".hl7", ".pit"}
+WATCHED_EXTENSIONS = {".hl7", ".pit", ".pdf"}
 
 
 def _is_watched(filename: str) -> bool:
@@ -48,7 +49,11 @@ def process_hl7_file(filepath: str) -> int:
     os.makedirs(processed_dir, exist_ok=True)
 
     try:
-        records = parse_hl7_file(filepath)
+        ext = Path(filepath).suffix.lower()
+        if ext == ".pdf":
+            records = parse_pdf_file(filepath)
+        else:
+            records = parse_hl7_file(filepath)
         if records:
             save_results(records, source_file=os.path.basename(filepath))
             patient = records[0].get("patient_name", "Unknown") if records else "Unknown"

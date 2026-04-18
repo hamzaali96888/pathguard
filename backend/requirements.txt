@@ -4,3 +4,4 @@ hl7==0.4.5
 watchdog==6.0.0
 python-multipart>=0.0.9
 aiofiles>=23.2.1
+pdfplumber>=0.11.0

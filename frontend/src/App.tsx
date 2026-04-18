@@ -113,10 +113,10 @@ export default function App() {
   const handleFiles = useCallback(async (files: File[]) => {
     const valid = files.filter(f => {
       const ext = f.name.split('.').pop()?.toLowerCase()
-      return ext === 'hl7' || ext === 'pit'
+      return ext === 'hl7' || ext === 'pit' || ext === 'pdf'
     })
     if (valid.length === 0) {
-      addToast('No .hl7 or .pit files found.', 'warning')
+      addToast('No .hl7, .pit or .pdf files found.', 'warning')
       return
     }
 
@@ -347,7 +347,7 @@ export default function App() {
               <path strokeLinecap="round" strokeLinejoin="round"
                 d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
             </svg>
-            <p className="text-lg font-semibold text-slate-800">Drop .hl7 / .pit files here</p>
+            <p className="text-lg font-semibold text-slate-800">Drop .hl7 / .pit / .pdf files here</p>
             <p className="text-sm text-slate-500">Files will be uploaded and processed automatically</p>
           </div>
         </div>
@@ -379,7 +379,7 @@ function DropZone({
       <input
         id={inputId}
         type="file"
-        accept=".hl7,.HL7,.pit,.PIT"
+        accept=".hl7,.HL7,.pit,.PIT,.pdf,.PDF"
         multiple
         className="sr-only"
         onChange={handleChange}
@@ -411,7 +411,7 @@ function DropZone({
             </svg>
             <span className="text-xs text-gray-500">
               <span className="font-medium text-slate-700">Click to upload</span>
-              {' '}or drag .hl7 / .pit files here
+              {' '}or drag .hl7 / .pit / .pdf files here
             </span>
           </>
         )}
