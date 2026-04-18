@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useId } from 'react'
 import type { TriageResponse, Patient } from './types'
 import { fetchResults, markReviewed, clearNormals, uploadFile, loadDemoData, resetDatabase } from './api'
 import Header from './components/Header'
@@ -50,7 +50,7 @@ export default function App() {
     try {
       const d = await fetchResults()
 
-      // Detect newly arrived patients (skip on first load)
+      // Detect newly arrived patients (skip on very first load)
       if (!isFirstLoad.current) {
         const prev = knownKeysRef.current
         for (const patient of d.patients) {
@@ -65,7 +65,6 @@ export default function App() {
         }
       }
 
-      // Update known keys
       knownKeysRef.current = new Set(d.patients.map(p => p.patient_key))
       isFirstLoad.current = false
 
@@ -102,8 +101,7 @@ export default function App() {
       setSessionReviewed(p => p + normalCount)
       setSessionTimeSaved(p => p + normalCount * 0.5)
       addToast(
-        `${normalCount} normal result${normalCount !== 1 ? 's' : ''} filed. ` +
-        `~${Math.round(normalCount * 0.5)} min saved.`,
+        `${normalCount} normal result${normalCount !== 1 ? 's' : ''} filed. ~${Math.round(normalCount * 0.5)} min saved.`,
       )
       await load(true)
     } finally {
@@ -111,13 +109,46 @@ export default function App() {
     }
   }, [data, load, addToast])
 
+  // ── Upload files (used by both click-picker and drag-and-drop) ──
+  const handleFiles = useCallback(async (files: File[]) => {
+    const valid = files.filter(f => {
+      const ext = f.name.split('.').pop()?.toLowerCase()
+      return ext === 'hl7' || ext === 'pit'
+    })
+    if (valid.length === 0) {
+      addToast('No .hl7 or .pit files found.', 'warning')
+      return
+    }
+
+    setIsUploading(true)
+    let uploaded = 0
+    for (const file of valid) {
+      try {
+        await uploadFile(file)
+        uploaded++
+      } catch (err) {
+        addToast(`Upload failed: ${file.name}`, 'warning')
+      }
+    }
+    setIsUploading(false)
+
+    if (uploaded > 0) {
+      // Server processes synchronously — reload immediately
+      await load(true)
+      addToast(
+        `${uploaded} file${uploaded !== 1 ? 's' : ''} uploaded — results updated.`,
+        'success',
+      )
+    }
+  }, [load, addToast])
+
   // ── Load demo data ──────────────────────────────────────────────
   const handleLoadDemo = useCallback(async () => {
     try {
       const { files_copied } = await loadDemoData()
-      addToast(`Loading ${files_copied} demo result${files_copied !== 1 ? 's' : ''}… check back in a moment.`, 'info')
-      // Give watcher time to process then reload
-      setTimeout(() => load(true), 3000)
+      // load_demo_direct is synchronous on the server — data is ready immediately
+      await load(true)
+      addToast(`${files_copied} demo results loaded.`, 'success')
     } catch {
       addToast('Failed to load demo data.', 'warning')
     }
@@ -131,14 +162,14 @@ export default function App() {
       setSessionTimeSaved(0)
       knownKeysRef.current = new Set()
       isFirstLoad.current = true
-      addToast('Dashboard reset — all results cleared.', 'info')
       await load(true)
+      addToast('Dashboard reset — all results cleared.', 'info')
     } catch {
       addToast('Reset failed.', 'warning')
     }
   }, [load, addToast])
 
-  // ── Drag-and-drop file upload ───────────────────────────────────
+  // ── Drag-and-drop ───────────────────────────────────────────────
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     dragCounter.current += 1
@@ -159,34 +190,9 @@ export default function App() {
     e.preventDefault()
     dragCounter.current = 0
     setIsDraggingOver(false)
-
-    const files = Array.from(e.dataTransfer.files).filter(f => {
-      const ext = f.name.split('.').pop()?.toLowerCase()
-      return ext === 'hl7' || ext === 'pit'
-    })
-
-    if (files.length === 0) {
-      addToast('No .hl7 or .pit files detected.', 'warning')
-      return
-    }
-
-    setIsUploading(true)
-    let uploaded = 0
-    for (const file of files) {
-      try {
-        await uploadFile(file)
-        uploaded++
-      } catch (err) {
-        addToast(`Upload failed: ${file.name}`, 'warning')
-      }
-    }
-    setIsUploading(false)
-
-    if (uploaded > 0) {
-      addToast(`Uploaded ${uploaded} file${uploaded !== 1 ? 's' : ''}. Results will appear shortly…`, 'info')
-      setTimeout(() => load(true), 3000)
-    }
-  }, [load, addToast])
+    const files = Array.from(e.dataTransfer.files)
+    await handleFiles(files)
+  }, [handleFiles])
 
   // ── Render states ──────────────────────────────────────────────
 
@@ -194,7 +200,6 @@ export default function App() {
   if (error)   return <ErrorScreen message={error} onRetry={() => load()} />
 
   const { patients, counts } = data!
-
   const sessionTotal = patients.length + sessionReviewed
 
   const searchLower = search.toLowerCase()
@@ -227,27 +232,9 @@ export default function App() {
       />
 
       <main className="flex-1 max-w-6xl w-full mx-auto pb-8">
-        {/* Summary chips */}
         <SummaryBanner counts={counts} />
 
-        {/* Drop zone — always visible, expands when dragging */}
-        <DropZone
-          active={isDraggingOver}
-          uploading={isUploading}
-          onFiles={async (files) => {
-            setIsUploading(true)
-            let uploaded = 0
-            for (const file of files) {
-              try { await uploadFile(file); uploaded++ }
-              catch { addToast(`Upload failed: ${file.name}`, 'warning') }
-            }
-            setIsUploading(false)
-            if (uploaded > 0) {
-              addToast(`Uploaded ${uploaded} file${uploaded !== 1 ? 's' : ''}. Results will appear shortly…`, 'info')
-              setTimeout(() => load(true), 1500)
-            }
-          }}
-        />
+        <DropZone uploading={isUploading} onFiles={handleFiles} />
 
         {/* Filter + search bar */}
         <div className="flex items-center gap-3 px-5 pb-3">
@@ -257,9 +244,7 @@ export default function App() {
                 key={f}
                 onClick={() => setFilter(f)}
                 className={`px-3 py-1.5 font-medium capitalize transition-colors border-r last:border-r-0 border-gray-100
-                  ${filter === f
-                    ? 'bg-slate-800 text-white'
-                    : 'text-gray-500 hover:bg-gray-50'}`}
+                  ${filter === f ? 'bg-slate-800 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
               >
                 {f === 'all' ? `All (${patients.length})` : f}
               </button>
@@ -284,9 +269,7 @@ export default function App() {
               <button
                 onClick={() => setSearch('')}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"
-              >
-                ✕
-              </button>
+              >✕</button>
             )}
           </div>
         </div>
@@ -341,9 +324,11 @@ export default function App() {
         {toasts.map(toast => (
           <div
             key={toast.id}
-            className={`flex items-center gap-3 text-white text-sm px-4 py-3
-                        rounded-lg shadow-lg min-w-[300px] animate-slide-in
-                        ${toast.type === 'warning' ? 'bg-amber-700' : toast.type === 'info' ? 'bg-slate-700' : 'bg-slate-800'}`}
+            className={`flex items-center gap-3 text-white text-sm px-4 py-3 rounded-lg shadow-lg
+                        min-w-[300px] animate-slide-in
+                        ${toast.type === 'warning' ? 'bg-amber-700'
+                          : toast.type === 'info'    ? 'bg-slate-700'
+                          : 'bg-slate-800'}`}
           >
             <span className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-xs
               ${toast.type === 'warning' ? 'bg-amber-500' : 'bg-emerald-500'}`}>
@@ -362,7 +347,7 @@ export default function App() {
               <path strokeLinecap="round" strokeLinejoin="round"
                 d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
             </svg>
-            <p className="text-lg font-semibold text-slate-800">Drop .hl7 files here</p>
+            <p className="text-lg font-semibold text-slate-800">Drop .hl7 / .pit files here</p>
             <p className="text-sm text-slate-500">Files will be uploaded and processed automatically</p>
           </div>
         </div>
@@ -371,65 +356,73 @@ export default function App() {
   )
 }
 
-/* ── Drop zone strip ────────────────────────────────────────────── */
+/* ── Drop zone (click to browse OR drag-and-drop) ───────────────── */
 
 function DropZone({
-  active, uploading, onFiles,
+  uploading,
+  onFiles,
 }: {
-  active: boolean
   uploading: boolean
   onFiles: (files: File[]) => void
 }) {
-  const inputRef = useRef<HTMLInputElement>(null)
+  // useId gives a stable, unique id — required to link <label> → <input>
+  const inputId = useId()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []).filter(f => {
-      const ext = f.name.split('.').pop()?.toLowerCase()
-      return ext === 'hl7' || ext === 'pit'
-    })
-    if (files.length) onFiles(files)
-    e.target.value = ''   // reset so same file can be re-selected
+    if (e.target.files) onFiles(Array.from(e.target.files))
+    e.target.value = ''   // allow re-selecting the same file
   }
 
   return (
-    <div
-      onClick={() => !uploading && inputRef.current?.click()}
-      className={`mx-5 mb-3 rounded-lg border-2 border-dashed transition-all duration-200 text-center cursor-pointer
-        ${active
-          ? 'border-indigo-400 bg-indigo-50 py-4'
-          : 'border-gray-200 bg-white py-2 hover:border-gray-300 hover:bg-gray-50'}`}
-    >
+    <div className="mx-5 mb-3">
+      {/* Hidden file input — triggered by the <label> below */}
       <input
-        ref={inputRef}
+        id={inputId}
         type="file"
         accept=".hl7,.HL7,.pit,.PIT"
         multiple
-        className="hidden"
+        className="sr-only"
         onChange={handleChange}
+        disabled={uploading}
       />
-      {uploading ? (
-        <span className="text-xs text-indigo-600 flex items-center justify-center gap-2">
-          <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-          </svg>
-          Uploading…
-        </span>
-      ) : (
-        <span className="text-xs text-gray-400">
-          <span className="text-slate-600 font-medium underline underline-offset-2">Click to upload</span>
-          {' '}or drag .hl7 / .pit files here
-        </span>
-      )}
+
+      {/* Clicking anywhere on this label opens the file picker */}
+      <label
+        htmlFor={inputId}
+        className={`flex items-center justify-center gap-2 w-full rounded-lg border-2 border-dashed
+                    py-2.5 transition-all duration-150 select-none
+                    ${uploading
+                      ? 'border-indigo-300 bg-indigo-50 cursor-wait'
+                      : 'border-gray-200 bg-white cursor-pointer hover:border-indigo-300 hover:bg-indigo-50'}`}
+      >
+        {uploading ? (
+          <>
+            <svg className="animate-spin h-3.5 w-3.5 text-indigo-500" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+            <span className="text-xs text-indigo-600 font-medium">Uploading…</span>
+          </>
+        ) : (
+          <>
+            <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round"
+                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+            </svg>
+            <span className="text-xs text-gray-500">
+              <span className="font-medium text-slate-700">Click to upload</span>
+              {' '}or drag .hl7 / .pit files here
+            </span>
+          </>
+        )}
+      </label>
     </div>
   )
 }
 
 /* ── Section header ─────────────────────────────────────────────── */
 
-function SectionHeader({
-  label, count, colorClass, lineClass, dotClass,
-}: {
+function SectionHeader({ label, count, colorClass, lineClass, dotClass }: {
   label: string; count: number; colorClass: string; lineClass: string; dotClass: string
 }) {
   return (
@@ -468,6 +461,7 @@ function LoadingScreen() {
 }
 
 function ErrorScreen({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const isLocal = import.meta.env.DEV
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
       <div className="text-center max-w-md px-6">
@@ -479,14 +473,18 @@ function ErrorScreen({ message, onRetry }: { message: string; onRetry: () => voi
         </div>
         <h2 className="text-lg font-semibold text-gray-800 mb-2">Cannot reach backend</h2>
         <p className="text-sm text-gray-500 mb-1">{message}</p>
-        <p className="text-xs text-gray-400 mb-6">
-          Make sure PathGuard backend is running on{' '}
-          <span className="font-mono">localhost:8000</span>
-        </p>
+        {isLocal && (
+          <p className="text-xs text-gray-400 mb-6">
+            Start the backend:{' '}
+            <span className="font-mono bg-gray-100 px-1 rounded">
+              cd backend && python3 -m uvicorn main:app --port 8000
+            </span>
+          </p>
+        )}
         <button
           onClick={onRetry}
           className="inline-flex items-center gap-2 rounded-lg bg-slate-800 text-white
-                     px-5 py-2.5 text-sm font-medium hover:bg-slate-700 transition-colors"
+                     px-5 py-2.5 text-sm font-medium hover:bg-slate-700 transition-colors mt-4"
         >
           Retry
         </button>
@@ -509,7 +507,7 @@ function EmptyState({ filtered }: { filtered: boolean }) {
       <p className="text-sm text-gray-400">
         {filtered
           ? 'Try adjusting your filter or search.'
-          : 'No unreviewed results. Drop .hl7 files into the drop_results_here/ folder to begin.'}
+          : 'No unreviewed results. Click the upload bar or use ⋮ → Load Demo Data to begin.'}
       </p>
     </div>
   )
