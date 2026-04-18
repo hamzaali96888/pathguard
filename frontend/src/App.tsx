@@ -231,7 +231,23 @@ export default function App() {
         <SummaryBanner counts={counts} />
 
         {/* Drop zone — always visible, expands when dragging */}
-        <DropZone active={isDraggingOver} uploading={isUploading} />
+        <DropZone
+          active={isDraggingOver}
+          uploading={isUploading}
+          onFiles={async (files) => {
+            setIsUploading(true)
+            let uploaded = 0
+            for (const file of files) {
+              try { await uploadFile(file); uploaded++ }
+              catch { addToast(`Upload failed: ${file.name}`, 'warning') }
+            }
+            setIsUploading(false)
+            if (uploaded > 0) {
+              addToast(`Uploaded ${uploaded} file${uploaded !== 1 ? 's' : ''}. Results will appear shortly…`, 'info')
+              setTimeout(() => load(true), 1500)
+            }
+          }}
+        />
 
         {/* Filter + search bar */}
         <div className="flex items-center gap-3 px-5 pb-3">
@@ -357,13 +373,40 @@ export default function App() {
 
 /* ── Drop zone strip ────────────────────────────────────────────── */
 
-function DropZone({ active, uploading }: { active: boolean; uploading: boolean }) {
+function DropZone({
+  active, uploading, onFiles,
+}: {
+  active: boolean
+  uploading: boolean
+  onFiles: (files: File[]) => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []).filter(f => {
+      const ext = f.name.split('.').pop()?.toLowerCase()
+      return ext === 'hl7' || ext === 'pit'
+    })
+    if (files.length) onFiles(files)
+    e.target.value = ''   // reset so same file can be re-selected
+  }
+
   return (
-    <div className={`mx-5 mb-3 rounded-lg border-2 border-dashed transition-all duration-200 text-center
-      ${active
-        ? 'border-indigo-400 bg-indigo-50 py-4'
-        : 'border-gray-200 bg-white py-2 hover:border-gray-300'}`}
+    <div
+      onClick={() => !uploading && inputRef.current?.click()}
+      className={`mx-5 mb-3 rounded-lg border-2 border-dashed transition-all duration-200 text-center cursor-pointer
+        ${active
+          ? 'border-indigo-400 bg-indigo-50 py-4'
+          : 'border-gray-200 bg-white py-2 hover:border-gray-300 hover:bg-gray-50'}`}
     >
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".hl7,.HL7,.pit,.PIT"
+        multiple
+        className="hidden"
+        onChange={handleChange}
+      />
       {uploading ? (
         <span className="text-xs text-indigo-600 flex items-center justify-center gap-2">
           <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
@@ -374,8 +417,8 @@ function DropZone({ active, uploading }: { active: boolean; uploading: boolean }
         </span>
       ) : (
         <span className="text-xs text-gray-400">
-          Drop .hl7 or .pit files here, or place them in the{' '}
-          <span className="font-mono font-medium text-gray-500">drop_results_here/</span> folder
+          <span className="text-slate-600 font-medium underline underline-offset-2">Click to upload</span>
+          {' '}or drag .hl7 / .pit files here
         </span>
       )}
     </div>
